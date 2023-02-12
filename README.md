@@ -3,7 +3,7 @@ Scraping bottle shop websites to find the best alcohol-per-dollar drink availabl
 
 
 ## Planned support for:
-- [ ] Cellarbration
+- [x] Cellarbration
 - [ ] Dan Murphy's
 - [ ] Liquorland
 - [ ] BWS
