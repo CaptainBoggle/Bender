@@ -14,8 +14,7 @@ url_list = ["https://www.cellarbrations.com.au/sm/planning/rsid/172986/categorie
 drink_list =[]
 for url in url_list:
     drink_soup = BeautifulSoup(requests.get(url).content, "html.parser")
-    meat = drink_soup.find("div", {'class': re.compile(r'^Listing--')})
-    listings = meat.find_all("div", {'class': re.compile(r'^ColListing--')})
+    listings = drink_soup.find_all("div", {'class': re.compile(r'^ColListing--')})
 
     for i in listings:
         descs = i.find_all("p", {'class': re.compile(r'^AriaProductTitleParagraph')})
@@ -30,5 +29,10 @@ for url in url_list:
         num, den = [float(re.sub("[^0-9.\-]","",x)) for x in frac_price.split("/")]
         alc_per_dollar = float(re.sub("[^0-9.\-]","",abv))/100 * den / num
         drink_list.append([name, price, abv , [num, den], alc_per_dollar])
-    
-pprint.pprint(drink_list)
+best_alc_per_dollar = 0
+for drink in drink_list:
+    if drink[4] > best_alc_per_dollar:
+        best_alc_per_dollar = drink[4]
+        best_drink = drink
+print(best_drink)
+
