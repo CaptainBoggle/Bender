@@ -26,7 +26,7 @@ for url in url_list:
         try:
             abv = re.findall(r'\d{1,2}\.\d{1,2}%', descs[1])[0]
         except: 
-            print("No ABV for " + name)
+            abv = re.findall(r'\d{1,2}\%', descs[1])[0]
         num, den = [float(re.sub("[^0-9.\-]","",x)) for x in frac_price.split("/")]
         alc_per_dollar = float(re.sub("[^0-9.\-]","",abv))/100 * den / num
         drink_list.append([name, price, abv , [num, den], alc_per_dollar])
