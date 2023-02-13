@@ -12,6 +12,12 @@ For each div:
 import re
 from bs4 import BeautifulSoup
 import requests
+import pickle
+import os
+
+use_cache = True
+write_cache = True
+pickled_file = "listings-cellarbrations.pickle"
 
 url_list = [
     "https://www.cellarbrations.com.au/sm/planning/rsid/172986/categories/spirits/whisky-id-Whisky_Food",
@@ -26,36 +32,39 @@ url_list = [
 ]
 
 drink_list = []
-for url in url_list:
-    drink_soup = BeautifulSoup(requests.get(url).content, "html.parser")
-    listings = drink_soup.find_all("div", {'class': re.compile(r'^ColListing--')})
 
-    for listing in listings:
-        descs = listing.find_all(
-            "p", {'class': re.compile(r'^AriaProductTitleParagraph')})
-        frac_price = listing.find(
-            "span", {'class': re.compile(r'^ProductCardPriceInfo--')}).text
+if use_cache and os.path.isfile(pickled_file):
+    drink_list = pickle.load(open(pickled_file, 'rb'))
+else:
+    for url in url_list:
+        drink_soup = BeautifulSoup(requests.get(url).content, "html.parser")
+        listings = drink_soup.find_all("div", {'class': re.compile(r'^ColListing--')})
+        
+        for listing in listings:
+            descs = listing.find_all(
+                "p", {'class': re.compile(r'^AriaProductTitleParagraph')})
+            frac_price = listing.find(
+                "span", {'class': re.compile(r'^ProductCardPriceInfo--')}).text
+    
+            descs = [i.text for i in descs]
+            name, price = descs[0].split(", ")
+    
+            try:
+                abv = re.findall(r'\d{1,2}\.\d{1,2}%', descs[1])[0]
+            except:  # pylint: disable=bare-except
+                abv = re.findall(r'\d{1,2}\%', descs[1])[0]
+    
+            num, den = [
+                float(re.sub("[^0-9.\-]", "", x)) for x in frac_price.split("/")
+            ]
+    
+            alc_per_dollar = float(re.sub("[^0-9.\-]", "", abv))/100 * den / num
+            drink_list.append([name, price, abv, [num, den], alc_per_dollar])
 
-        descs = [i.text for i in descs]
-        name, price = descs[0].split(", ")
+    if write_cache:
+        # Pickle the listings:
+        pickle.dump(drink_list, open(pickled_file, 'wb'))
 
-        try:
-            abv = re.findall(r'\d{1,2}\.\d{1,2}%', descs[1])[0]
-        except:  # pylint: disable=bare-except
-            abv = re.findall(r'\d{1,2}\%', descs[1])[0]
-
-        num, den = [
-            float(re.sub("[^0-9.\-]", "", x)) for x in frac_price.split("/")
-        ]
-
-        alc_per_dollar = float(re.sub("[^0-9.\-]", "", abv))/100 * den / num
-        drink_list.append([name, price, abv, [num, den], alc_per_dollar])
-
-# apd = alcohol per dollar
-best_apd = 0
-for drink in drink_list:
-    if drink[4] > best_apd:
-        best_apd = drink[4]
-        best_drink = drink
-
-print(best_drink)
+# Print the top 10
+for drink in sorted(drink_list, key=lambda x: x[4], reverse=True)[:10]:
+    print ("{}: {} @ {} | {:0.2f} abv/$".format(drink[0], drink[1], drink[2], drink[4]))
